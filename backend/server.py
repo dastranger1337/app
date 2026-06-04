@@ -718,7 +718,50 @@ async def axiom_attack(req: AgentRequest):
 
 @app.post("/api/functions/v1/get-secrets")
 async def api_get_secrets(request: Request):
-    return {"secrets": {}, "ok": True}
+    """Return the actual runtime config values the AXIOM Config tab needs to render.
+    These are the operator's own deployment secrets — exposed on purpose
+    so the operator can verify the active configuration."""
+    # Read the frontend's .env so SUPABASE_URL / SUPABASE_ANON_KEY can be
+    # displayed alongside backend-side AI credentials. The file is small;
+    # parse it on every call so edits are reflected immediately.
+    frontend_env = {}
+    try:
+        env_path = Path("/app/frontend/.env")
+        if env_path.exists():
+            for line in env_path.read_text().splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                frontend_env[k.strip()] = v.strip().strip('"').strip("'")
+    except Exception:
+        pass
+
+    secrets = {
+        # ── AI credentials (backend-side, never previously exposed to client) ──
+        "ONSPACE_AI_API_KEY": os.environ.get("EMERGENT_LLM_KEY", ""),
+        "ONSPACE_AI_BASE_URL": (
+            os.environ.get("ONSPACE_AI_BASE_URL")
+            or "https://integrations.emergentagent.com/llm"
+        ),
+        # ── Supabase (mirrored from the frontend .env so the UI shows them) ──
+        "SUPABASE_URL": frontend_env.get("EXPO_PUBLIC_SUPABASE_URL", ""),
+        "SUPABASE_ANON_KEY": frontend_env.get("EXPO_PUBLIC_SUPABASE_ANON_KEY", ""),
+        "SUPABASE_SERVICE_ROLE_KEY": os.environ.get("SUPABASE_SERVICE_ROLE_KEY", ""),
+        "SUPABASE_DB_URL": os.environ.get("SUPABASE_DB_URL", ""),
+        # ── AXIOM runtime (extra context for operators) ──
+        "AXIOM_RUNTIME_URL": frontend_env.get("EXPO_PUBLIC_AXIOM_RUNTIME_URL", ""),
+        "MONGO_URL": os.environ.get("MONGO_URL", ""),
+        "DB_NAME": os.environ.get("DB_NAME", ""),
+        "DEFAULT_LLM_PROVIDER": os.environ.get("DEFAULT_LLM_PROVIDER", ""),
+        "DEFAULT_LLM_MODEL": os.environ.get("DEFAULT_LLM_MODEL", ""),
+    }
+    return {"secrets": secrets, "ok": True}
+
+
+@app.post("/functions/v1/get-secrets")
+async def legacy_get_secrets(request: Request):
+    return await api_get_secrets(request)
 
 
 @app.post("/api/functions/v1/get-users")
@@ -729,14 +772,7 @@ async def api_get_users(request: Request):
 # ============================================================================
 #  Stubs so the rest of the app doesn't break
 # ============================================================================
-@app.post("/functions/v1/get-secrets")
-async def get_secrets(request: Request):
-    return {"secrets": {}, "ok": True}
-
-
-@app.post("/functions/v1/get-users")
-async def get_users(request: Request):
-    return {"users": [], "ok": True}
+# (get-secrets is implemented above with real values; nothing else needed here.)
 
 
 # ============================================================================
