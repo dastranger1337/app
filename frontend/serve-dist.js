@@ -1,11 +1,14 @@
 /**
  * Lightweight static server for the Expo web export (./dist).
- * Serves files, gives index.html as fallback for client-side routing,
- * adds CORS headers, and supports HEAD/GET only.
+ * - Serves precompressed .gz when the client accepts gzip
+ * - Adds `Cache-Control: public, max-age=31536000, immutable` to hashed assets
+ * - Adds `Cache-Control: no-cache` to HTML
+ * - SPA fallback to index.html for client-side routing
  */
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 const ROOT = path.join(__dirname, 'dist');
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -33,6 +36,44 @@ const MIME = {
   '.wasm': 'application/wasm',
 };
 
+// MIME types that benefit from gzip
+const COMPRESSIBLE = new Set([
+  '.html', '.js', '.mjs', '.css', '.json', '.map', '.svg', '.txt', '.wasm'
+]);
+
+// ── One-time precompression of all compressible assets at startup ──
+// Removes per-request gzip CPU cost; serve-dist just streams the .gz file.
+function precompress(dir) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const e of entries) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) { precompress(p); continue; }
+    const ext = path.extname(e.name).toLowerCase();
+    if (!COMPRESSIBLE.has(ext)) continue;
+    if (e.name.endsWith('.gz')) continue;
+    const gzPath = p + '.gz';
+    try {
+      // Skip if gz is fresh
+      const src = fs.statSync(p);
+      const gz = fs.existsSync(gzPath) ? fs.statSync(gzPath) : null;
+      if (gz && gz.mtimeMs >= src.mtimeMs) continue;
+      const buf = fs.readFileSync(p);
+      const compressed = zlib.gzipSync(buf, { level: 9 });
+      // Only keep the .gz if it's actually smaller
+      if (compressed.length < buf.length * 0.95) {
+        fs.writeFileSync(gzPath, compressed);
+      }
+    } catch {}
+  }
+}
+
+if (fs.existsSync(ROOT)) {
+  console.log('[serve-dist] precompressing static assets...');
+  const t0 = Date.now();
+  precompress(ROOT);
+  console.log(`[serve-dist] precompression done in ${Date.now() - t0}ms`);
+}
+
 function safeJoin(root, urlPath) {
   const decoded = decodeURIComponent(urlPath.split('?')[0].split('#')[0]);
   const p = path.normalize(path.join(root, decoded));
@@ -49,18 +90,39 @@ function send(res, status, body, headers = {}) {
   res.end(body);
 }
 
-function streamFile(res, file) {
+// Hashed asset paths get year-long immutable caching
+const HASHED_RE = /-[a-f0-9]{16,}\.(js|css|map|woff2?|ttf|otf)$/i;
+const isHashed = (p) => HASHED_RE.test(p);
+
+function streamFile(res, file, acceptsGzip) {
   const ext = path.extname(file).toLowerCase();
   const type = MIME[ext] || 'application/octet-stream';
-  fs.stat(file, (err, st) => {
+
+  // Prefer precompressed .gz if available + accepted
+  const gzPath = file + '.gz';
+  const useGz = acceptsGzip && COMPRESSIBLE.has(ext) && fs.existsSync(gzPath);
+  const actualFile = useGz ? gzPath : file;
+
+  fs.stat(actualFile, (err, st) => {
     if (err || !st.isFile()) return fallback(res);
-    res.writeHead(200, {
+
+    const cacheControl = ext === '.html'
+      ? 'no-cache'
+      : isHashed(file)
+        ? 'public, max-age=31536000, immutable'
+        : 'public, max-age=3600';
+
+    const headers = {
       'Content-Type': type,
       'Content-Length': st.size,
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600',
-    });
-    fs.createReadStream(file).pipe(res);
+      'Cache-Control': cacheControl,
+      'Vary': 'Accept-Encoding',
+    };
+    if (useGz) headers['Content-Encoding'] = 'gzip';
+
+    res.writeHead(200, headers);
+    fs.createReadStream(actualFile).pipe(res);
   });
 }
 
@@ -76,18 +138,20 @@ const server = http.createServer((req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     return send(res, 405, 'method not allowed');
   }
+  const acceptsGzip = /\bgzip\b/.test(req.headers['accept-encoding'] || '');
+
   let urlPath = req.url || '/';
-  if (urlPath === '/' || urlPath === '') return streamFile(res, path.join(ROOT, 'index.html'));
+  if (urlPath === '/' || urlPath === '') return streamFile(res, path.join(ROOT, 'index.html'), acceptsGzip);
 
   const file = safeJoin(ROOT, urlPath);
   if (!file) return send(res, 400, 'bad path');
 
   fs.stat(file, (err, st) => {
-    if (!err && st.isFile()) return streamFile(res, file);
+    if (!err && st.isFile()) return streamFile(res, file, acceptsGzip);
     // Try with .html appended (Expo router static)
     const withHtml = file + '.html';
     fs.stat(withHtml, (e2, s2) => {
-      if (!e2 && s2.isFile()) return streamFile(res, withHtml);
+      if (!e2 && s2.isFile()) return streamFile(res, withHtml, acceptsGzip);
       // SPA fallback
       return fallback(res);
     });
