@@ -80,8 +80,8 @@ const EDGE_FUNCTIONS = [
     description: 'Primary AI inference relay. Routes to OnSpace AI API. Supports SSE streaming with configurable model selection.',
     requestSchema: '{ messages: [{role, content}], stream?: boolean, model?: string }',
     responseSchema: 'text/event-stream (SSE) | application/json',
-    runtimes: ['google/gemini-3-flash-preview', 'google/gemini-3-pro-preview', 'openai/gpt-5.1', 'openai/gpt-5-mini', 'google/gemini-2.5-flash-lite'],
-    envVars: ['ONSPACE_AI_API_KEY', 'ONSPACE_AI_BASE_URL'],
+    runtimes: ['google/gemini-3-flash-preview', 'google/gemini-3-pro-preview', 'openai/gpt-5.1', 'openai/gpt-5-mini', 'google/gemini-2.5-flash-lite', 'openspace/openspace-default', 'lovable/lovable-default'],
+    envVars: ['ONSPACE_AI_API_KEY', 'ONSPACE_AI_BASE_URL', 'OPENSPACE_AI_API_KEY', 'OPENSPACE_AI_BASE_URL', 'LOVABLE_API_KEY', 'LOVABLE_BASE_URL'],
     timeout: 'default Deno limit',
     cors: true,
   },
@@ -1630,6 +1630,8 @@ const dbUrl   = Deno.env.get('SUPABASE_DB_URL');
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row', gap: Spacing.sm, paddingBottom: Spacing.sm }}>
               {[
                 { label: 'OpenAI', url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+                { label: 'OpenSpace AI', url: 'https://api.openspace.ai/v1', model: 'openspace-default' },
+                { label: 'Lovable AI', url: 'https://ai.gateway.lovable.dev/v1', model: 'google/gemini-2.5-flash' },
                 { label: 'Groq', url: 'https://api.groq.com/openai/v1', model: 'llama-3.1-70b-versatile' },
                 { label: 'Mistral', url: 'https://api.mistral.ai/v1', model: 'mistral-large-latest' },
                 { label: 'Together', url: 'https://api.together.xyz/v1', model: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo' },

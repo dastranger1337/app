@@ -466,6 +466,28 @@ async def api_chat(req: ChatRequest):
 
     provider = (req.provider or os.environ.get("DEFAULT_LLM_PROVIDER", DEFAULT_PROVIDER)).lower()
     model = req.model or os.environ.get("DEFAULT_LLM_MODEL", DEFAULT_MODEL)
+
+    # Operator-managed providers (OpenSpace, Lovable, …) route through the
+    # OpenAI-compatible passthrough using their dedicated env-var pair.
+    if provider in CUSTOM_PROVIDERS:
+        cfg = CUSTOM_PROVIDERS[provider]
+        base_url = os.environ.get(cfg["base_url_env"]) or cfg["default_base_url"]
+        api_key  = os.environ.get(cfg["api_key_env"], "")
+        if not api_key:
+            async def _missing_key():
+                yield _sse(_openai_chunk(
+                    f"[{provider} not configured] Set {cfg['api_key_env']} in Config → ENV VARS.",
+                    "stop",
+                ))
+                yield _sse_done()
+            return StreamingResponse(_missing_key(), media_type="text/event-stream",
+                                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+        return StreamingResponse(
+            _stream_custom_openai(base_url, api_key, model, messages),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
     return StreamingResponse(
         _stream_emergent(provider, model, messages),
         media_type="text/event-stream",
@@ -981,6 +1003,20 @@ async def api_get_secrets(request: Request):
             or os.environ.get("ONSPACE_AI_BASE_URL")
             or "https://integrations.emergentagent.com/llm"
         ),
+        # ── OpenSpace AI (operator-managed OpenAI-compatible) ──
+        "OPENSPACE_AI_BASE_URL": (
+            backend_env.get("OPENSPACE_AI_BASE_URL")
+            or os.environ.get("OPENSPACE_AI_BASE_URL")
+            or "https://api.openspace.ai/v1"
+        ),
+        "OPENSPACE_AI_API_KEY": backend_env.get("OPENSPACE_AI_API_KEY") or os.environ.get("OPENSPACE_AI_API_KEY", ""),
+        # ── Lovable AI Gateway (operator-managed OpenAI-compatible) ──
+        "LOVABLE_BASE_URL": (
+            backend_env.get("LOVABLE_BASE_URL")
+            or os.environ.get("LOVABLE_BASE_URL")
+            or "https://ai.gateway.lovable.dev/v1"
+        ),
+        "LOVABLE_API_KEY": backend_env.get("LOVABLE_API_KEY") or os.environ.get("LOVABLE_API_KEY", ""),
         # ── Supabase (mirrored from the frontend .env so the UI shows them) ──
         "SUPABASE_URL": frontend_env.get("EXPO_PUBLIC_SUPABASE_URL", ""),
         "SUPABASE_ANON_KEY": frontend_env.get("EXPO_PUBLIC_SUPABASE_ANON_KEY", ""),
@@ -1037,7 +1073,12 @@ def _write_dotenv(p: Path, updates: dict[str, str]) -> None:
 # Allowlist of editable keys per file so users can't break the runtime
 EDITABLE_BACKEND_KEYS = {
     "EMERGENT_LLM_KEY",
+    "ONSPACE_AI_API_KEY",
     "ONSPACE_AI_BASE_URL",
+    "OPENSPACE_AI_API_KEY",
+    "OPENSPACE_AI_BASE_URL",
+    "LOVABLE_API_KEY",
+    "LOVABLE_BASE_URL",
     "DEFAULT_LLM_PROVIDER",
     "DEFAULT_LLM_MODEL",
     "MONGO_URL",
@@ -1108,6 +1149,33 @@ EMERGENT_MODELS = {
         {"id": "gemini-3-pro",                "label": "Gemini 3 Pro",       "tier": "best"},
         {"id": "gemini-3-flash",              "label": "Gemini 3 Flash",     "tier": "fast"},
     ],
+    # ── Custom OpenAI-compatible providers (operator-managed keys) ──
+    "openspace": [
+        {"id": "openspace-default",  "label": "OpenSpace Default",  "tier": "best"},
+        {"id": "openspace-pro",      "label": "OpenSpace Pro",      "tier": "deep"},
+        {"id": "openspace-mini",     "label": "OpenSpace Mini",     "tier": "fast"},
+    ],
+    "lovable": [
+        {"id": "lovable-default",                "label": "Lovable Default",         "tier": "best"},
+        {"id": "google/gemini-2.5-flash",        "label": "Lovable · Gemini Flash",  "tier": "fast"},
+        {"id": "openai/gpt-5-mini",              "label": "Lovable · GPT-5 mini",    "tier": "fast"},
+        {"id": "anthropic/claude-sonnet-4-5",    "label": "Lovable · Claude Sonnet", "tier": "deep"},
+    ],
+}
+
+# Providers that route through the custom OpenAI-compatible passthrough
+# (operator supplies the API key + base URL via the Config tab).
+CUSTOM_PROVIDERS: dict[str, dict[str, str]] = {
+    "openspace": {
+        "base_url_env": "OPENSPACE_AI_BASE_URL",
+        "api_key_env":  "OPENSPACE_AI_API_KEY",
+        "default_base_url": "https://api.openspace.ai/v1",
+    },
+    "lovable": {
+        "base_url_env": "LOVABLE_BASE_URL",
+        "api_key_env":  "LOVABLE_API_KEY",
+        "default_base_url": "https://ai.gateway.lovable.dev/v1",
+    },
 }
 
 
@@ -1115,8 +1183,22 @@ EMERGENT_MODELS = {
 async def api_models():
     """List Emergent-managed LLMs the operator can pick from for the
     default AXIOM chat/agent path. The custom-OpenAI passthrough stays
-    separate (configured by the user in the Config → AI section)."""
-    return {"providers": EMERGENT_MODELS}
+    separate (configured by the user in the Config → AI section).
+
+    `endpoints` describes the env vars + default base URLs for any
+    operator-managed providers so the UI can hint where to paste keys."""
+    return {
+        "providers": EMERGENT_MODELS,
+        "endpoints": {
+            name: {
+                "baseUrlEnv":     cfg["base_url_env"],
+                "apiKeyEnv":      cfg["api_key_env"],
+                "defaultBaseUrl": cfg["default_base_url"],
+                "managed":        False,
+            }
+            for name, cfg in CUSTOM_PROVIDERS.items()
+        },
+    }
 
 
 @app.post("/functions/v1/get-secrets")

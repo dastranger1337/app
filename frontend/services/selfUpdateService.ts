@@ -149,6 +149,15 @@ export const MODELS = [
   { id: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Lite', tier: 'lite', description: 'Lightest model, minimal latency' },
   { id: 'nousresearch/hermes-3-llama-3.1-405b', name: 'Hermes 3 405B', tier: 'pro', description: 'NousResearch Hermes 3 — 405B, strong instruction following & tool use (OpenRouter)' },
   { id: 'nousresearch/hermes-3-llama-3.1-70b', name: 'Hermes 3 70B', tier: 'fast', description: 'NousResearch Hermes 3 — 70B, fast with excellent reasoning (OpenRouter)' },
+  // ── OpenSpace AI (configure key in Config → ENV VARS) ──
+  { id: 'openspace/openspace-default', name: 'OpenSpace Default', tier: 'pro', description: 'OpenSpace AI default model — requires OPENSPACE_AI_API_KEY' },
+  { id: 'openspace/openspace-pro',     name: 'OpenSpace Pro',     tier: 'pro', description: 'OpenSpace AI deep-reasoning model' },
+  { id: 'openspace/openspace-mini',    name: 'OpenSpace Mini',    tier: 'fast', description: 'OpenSpace AI low-latency model' },
+  // ── Lovable AI Gateway (configure key in Config → ENV VARS) ──
+  { id: 'lovable/lovable-default',                name: 'Lovable Default',         tier: 'pro',  description: 'Lovable AI Gateway default — requires LOVABLE_API_KEY' },
+  { id: 'lovable/google/gemini-2.5-flash',        name: 'Lovable · Gemini Flash',  tier: 'fast', description: 'Gemini 2.5 Flash via Lovable AI Gateway' },
+  { id: 'lovable/openai/gpt-5-mini',              name: 'Lovable · GPT-5 mini',    tier: 'fast', description: 'GPT-5 mini via Lovable AI Gateway' },
+  { id: 'lovable/anthropic/claude-sonnet-4-5',    name: 'Lovable · Claude Sonnet', tier: 'pro',  description: 'Claude Sonnet 4.5 via Lovable AI Gateway' },
 ];
 
 export async function getSystemPrompt(): Promise<string> {

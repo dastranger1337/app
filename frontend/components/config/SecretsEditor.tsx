@@ -24,11 +24,17 @@ interface SecretField {
 }
 
 const EDITABLE_FIELDS: SecretField[] = [
-  // ── AI ──
+  // ── AI (Emergent Universal) ──
   { key: 'EMERGENT_LLM_KEY',       label: 'Emergent Universal LLM Key', category: 'AI',     sensitive: true  },
   { key: 'ONSPACE_AI_BASE_URL',    label: 'Emergent LLM Base URL',      category: 'AI'                       },
   { key: 'DEFAULT_LLM_PROVIDER',   label: 'Default Provider',           category: 'AI',     isProvider: true },
   { key: 'DEFAULT_LLM_MODEL',      label: 'Default Model',              category: 'AI',     isModel: true    },
+  // ── OpenSpace AI (custom OpenAI-compatible) ──
+  { key: 'OPENSPACE_AI_BASE_URL',  label: 'OpenSpace AI Base URL',      category: 'OpenSpace'                },
+  { key: 'OPENSPACE_AI_API_KEY',   label: 'OpenSpace AI API Key',       category: 'OpenSpace', sensitive: true },
+  // ── Lovable AI Gateway (custom OpenAI-compatible) ──
+  { key: 'LOVABLE_BASE_URL',       label: 'Lovable AI Base URL',        category: 'Lovable'                  },
+  { key: 'LOVABLE_API_KEY',        label: 'Lovable AI API Key',         category: 'Lovable', sensitive: true },
   // ── Supabase / runtime ──
   { key: 'EXPO_PUBLIC_AXIOM_RUNTIME_URL', label: 'AXIOM Runtime URL',   category: 'Runtime'                  },
   { key: 'EXPO_PUBLIC_SUPABASE_URL',      label: 'Supabase URL',        category: 'Supabase'                 },

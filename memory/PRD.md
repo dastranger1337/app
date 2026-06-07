@@ -71,6 +71,32 @@
 - ✅ `nmap <target>` "just works" — `--unprivileged` is auto-injected by the
   `/usr/local/bin/nmap` wrapper so users/AI don't have to remember `-sT -Pn`.
 
+
+## What's been implemented (2026-02 — fork session)
+- ✅ Added **OpenSpace AI** and **Lovable AI** as selectable LLM providers
+  while preserving every existing AI choice.
+  - Backend (`/app/backend/server.py`):
+    - `EMERGENT_MODELS` now includes `openspace` (default/pro/mini) and
+      `lovable` (default + gemini-2.5-flash / gpt-5-mini / claude-sonnet-4-5).
+    - New `CUSTOM_PROVIDERS` registry maps `openspace` → `OPENSPACE_AI_BASE_URL`/
+      `OPENSPACE_AI_API_KEY` (default `https://api.openspace.ai/v1`) and
+      `lovable` → `LOVABLE_BASE_URL`/`LOVABLE_API_KEY`
+      (default `https://ai.gateway.lovable.dev/v1`).
+    - `/api/chat` routes these providers through the OpenAI-compatible
+      passthrough using their env-var pairs; falls back with a friendly
+      "set the key in Config" SSE message if the key is missing.
+    - `/api/models` now also returns an `endpoints` object describing the
+      base URL + env-var names for the UI to display.
+    - `get-secrets` / `EDITABLE_BACKEND_KEYS` allow live edits of the new keys.
+  - Frontend:
+    - `components/config/SecretsEditor.tsx` shows dedicated OpenSpace and
+      Lovable cards (base URL + sensitive API key) — visible in the Config
+      → ENV VARS tab.
+    - `services/selfUpdateService.ts` `MODELS` includes the new IDs so the
+      chat / profile model picker lists them with descriptions.
+    - `app/(tabs)/config.tsx` quick-presets now offer one-click OpenSpace AI
+      and Lovable AI presets, and the endpoint manifest lists the new env vars.
+
 ## Endpoints quick reference
 | Path | Method | Purpose |
 |---|---|---|
