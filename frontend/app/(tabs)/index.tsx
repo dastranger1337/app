@@ -43,6 +43,10 @@ export default function ChatScreen() {
     setAutoExec,
   } = useChatContext();
   const flatListRef = useRef<FlatList>(null);
+  // Track whether the user is currently parked at the bottom of the chat.
+  // We only auto-scroll on content growth when this is true, so scrolling
+  // up to read older messages no longer snaps the view back down.
+  const stickToBottomRef = useRef(true);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuth();
@@ -80,9 +84,21 @@ export default function ChatScreen() {
   const handleSend = useCallback(() => {
     if (inputText.trim()) {
       sendUserMessage(inputText);
+      // User just sent — they want to see their own message land.
+      stickToBottomRef.current = true;
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     }
   }, [inputText, sendUserMessage]);
+
+  // Detect whether the user is currently near the bottom of the chat. If
+  // they scroll up to read history, suspend auto-stick; resume the moment
+  // they scroll back within 80px of the end.
+  const handleScroll = useCallback((e: any) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    const distanceFromBottom =
+      contentSize.height - (contentOffset.y + layoutMeasurement.height);
+    stickToBottomRef.current = distanceFromBottom < 80;
+  }, []);
 
   const handleQuickAction = useCallback((prompt: string) => {
     injectPrompt(prompt);
