@@ -1,4 +1,0 @@
-[1m[31mERROR Opening: http://127.0.0.1:80 - Connection refused - connect(2) for "127.0.0.1" port 80[0m
-[1m[31mERROR Opening: http://127.0.0.1:443 - Connection refused - connect(2) for "127.0.0.1" port 443[0m
-[1m[31mERROR Opening: http://127.0.0.1:8000 - Connection refused - connect(2) for "127.0.0.1" port 8000[0m
-[1m[31mERROR Opening: http://127.0.0.1:8080 - Connection refused - connect(2) for "127.0.0.1" port 8080[0m

@@ -1,5 +1,0 @@
-[
-{"target":"https://appcloner.app","http_status":200,"request_config":{"headers":{"User-Agent":"WhatWeb/0.5.5"}},"plugins":{"Country":{"string":["RESERVED"],"module":["ZZ"]},"Email":{"string":["support@appcloner.app"]},"HTML5":{},"HTTPServer":{"string":["cloudflare"]},"IP":{"string":["172.67.209.48"]},"Open-Graph-Protocol":{"version":["website"]},"Script":{"string":["text/javascript"]},"Title":{"string":["App Cloner - Official Home Page"]},"UncommonHeaders":{"string":["x-cloud-trace-context,report-to,nel,cf-cache-status,cf-ray,alt-svc"]}}}
-,
-{"target":"http://appcloner.app","http_status":200,"request_config":{"headers":{"User-Agent":"WhatWeb/0.5.5"}},"plugins":{"Country":{"string":["RESERVED"],"module":["ZZ"]},"Email":{"string":["support@appcloner.app"]},"HTML5":{},"HTTPServer":{"string":["cloudflare"]},"IP":{"string":["172.67.209.48"]},"Open-Graph-Protocol":{"version":["website"]},"Script":{"string":["text/javascript"]},"Title":{"string":["App Cloner - Official Home Page"]},"UncommonHeaders":{"string":["x-cloud-trace-context,report-to,nel,cf-cache-status,cf-ray,alt-svc"]}}}
-]
