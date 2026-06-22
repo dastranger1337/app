@@ -25,6 +25,9 @@ cd /app/new-app
 ```
 Then visit `http://127.0.0.1:8000`.
 
+### Option 3: Preview on emergent.sh
+If emergent.sh supports static preview from this repo, you can deploy using the `app.json` manifest.
+
 ## Configuration
 
 Use the CONFIG panel inside the app to set:

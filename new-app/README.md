@@ -30,6 +30,9 @@ python3 -m http.server 8000
 
 Open `http://127.0.0.1:8000` in your browser.
 
+### Option 3: Preview on emergent.sh
+Use the root `app.json` manifest to tell emergent.sh to serve `new-app` as a static site.
+
 ## Configuration
 
 Use the CONFIG panel to set:
