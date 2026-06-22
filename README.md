@@ -1,53 +1,303 @@
-# Axiom Red-Team
+# Axiom Red-Team CLI
 
-> An autonomous, AI-powered red-team operator that actually executes commands —
-> not just suggests them.
+> An autonomous, AI-powered penetration testing operator for Linux. Command any LLM
+> to execute real reconnaissance and exploitation attacks with 40+ integrated tools.
 
-Axiom Red-Team is a full-stack offensive-security app that gives an LLM operator
-direct access to a real Linux shell with **40+ pentest tools pre-installed**
-(`nmap`, `nikto`, `whatweb`, `sqlmap`, `gobuster`, `hydra`, `john`, `hashcat`,
-`dig`, `masscan`, `nc`, `dirb`, `wfuzz`, `smbclient`, `ldap`, `snmp`, `curl`,
-`openssl`, the full SecLists wordlist tree, and more). The AI can plan a recon
-or exploitation operation, emit a real shell command, the runtime executes it
-against any target, and the output is fed back into the next conversational
-turn — fully closed-loop.
+**Axiom Red-Team CLI** is a terminal-based offensive-security framework that gives you
+direct access to a Linux shell with 40+ pre-installed penetration testing tools
+(`nmap`, `sqlmap`, `nikto`, `whatweb`, `gobuster`, `hydra`, `john`, `hashcat`,
+`dig`, `masscan`, `wfuzz`, `smbclient`, and more). Chat with Claude, GPT, or any
+LLM—it analyzes your target, emits shell commands, the runtime executes them in
+real-time, and feeds results back into the next conversational turn.
+Fully autonomous, fully closed-loop.
 
-Originally cloned from
-[`dastranger1337/AxiomRed-9b04ri`](https://github.com/dastranger1337/AxiomRed-9b04ri).
-This fork swaps the upstream Piston / Wandbox sandbox for a **local container
-shell** runtime, and adds a complete FastAPI backend, the Emergent Universal
-LLM key, custom OpenAI-compatible passthrough, autonomous god-mode, and more.
+## 🚀 Quick Start
+
+```bash
+# 1. Setup (installs dependencies and creates venv)
+cd /app/backend && bash cli_run.sh
+
+# 2. Configure your AI provider in .env
+# (Emergent key is free: https://emergentintegrations.com)
+
+# 3. Launch Axiom
+python3 axiom_cli.py
+```
+
+Then:
+```
+> /chat Scan scanme.nmap.org for open ports
+Axiom: I'll perform a service scan...
+[Auto-executing bash]
+[✓ Success] Found ports: 22/ssh, 80/http, 443/https
+```
+
+See [Quick Start Guide](docs/QUICK_START.md) for full setup instructions.
 
 ---
 
 ## Features
 
-### Three ways to drive a command
-| Caller | How it works |
-|---|---|
-| **Terminal tab** | Type a command, hit RUN, see output streamed back. Direct call to `POST /api/exec`. |
-| **Chat AUTO-EXEC** | The AI emits a bash code block in chat → frontend extracts it → posts to `/api/exec` → output fed back to the LLM as the next user message. Closed loop, capped at 3 hops (∞ when god mode is on). |
-| **Agent runner** | Recon / Exploit / Post-Exploit / Evasion / Full-Chain agents generate a structured plan via `POST /api/functions/v1/axiom-agent` then execute each step through the same `/api/exec`. |
-| **God Function (`/api/god`)** | Free-form intent → autonomous plan→exec→analyze loop streamed as SSE. Fully unrestricted. |
+### Three Ways to Use Axiom
 
-### AI engines (toggle in chat header)
-- **Emergent Universal LLM key** (default) — Claude Sonnet 4.5 / Haiku 4.5 via
-  `emergentintegrations`.
-- **Custom OpenAI-compatible** — paste any base URL + key + model
-  (OpenAI, Groq, Mistral, Together, OpenRouter, Ollama, LM Studio, vLLM, …)
-  in the Config tab. Streamed passthrough.
+| Method | Example | Use Case |
+|--------|---------|----------|
+| **AI Chat** | `/chat Scan scanme.nmap.org` | Autonomous planning + execution |
+| **Direct Command** | `/exec nmap -F scanme.nmap.org` | Manual tool usage |
+| **Auto-Exec** | Enabled by default | Chain commands in closed loop |
 
-### God user + god mode
-- **God user:** type `AXIOM-ASCEND-OMNIPOTENT-1337` (or `ASCEND-AXIOM-ROOT`
-  or `GODMODE-AXIOM-2026`) as the password with any email → bypass Supabase
-  auth entirely, drop into a synthetic `god@axiom.local` session.
-- **God mode toggle** in Config → strips all system-prompt restrictions,
-  lifts the auto-exec hop cap to 999, removes the client-side LLM timeout,
-  unlocks `/api/god`.
+### AI Engines (toggle in config)
 
-### Self-test
-- `GET /api/selftest` runs all 38 tools through the same `/api/exec` pipeline
-  in parallel (~2.7 s) and returns a green/red pass report. The same code path
+- **Emergent Universal LLM** (default) — Claude 4.5 / Haiku via `emergentintegrations`
+- **Custom OpenAI-compatible** — OpenAI, Groq, Mistral, Together, Ollama, LM Studio, etc.
+
+### Installed Tools
+
+**Network Scanning**: nmap, masscan, traceroute, netdiscover  
+**Web Testing**: nikto, whatweb, gobuster, wfuzz, sqlmap, dirb  
+**Credential Attack**: hydra, john, hashcat  
+**DNS**: dig, nslookup, whois  
+**Data**: curl, openssl, nc, jq, exiftool  
+**Wordlists**: /opt/SecLists (OWASP complete tree)  
+**Total**: 40+ tools pre-installed
+
+### Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/chat <msg>` | Send to AI (triggers auto-exec) |
+| `/exec <cmd>` | Run bash directly |
+| `/tools` | List installed tools |
+| `/status` | Check tool install progress |
+| `/auto-exec` | Toggle auto code execution |
+| `/clear` | Clear chat history |
+| `/help` | Show all commands |
+
+---
+
+## Installation
+
+### Requirements
+
+- Linux/Unix system (Ubuntu, Debian, CentOS, macOS, WSL)
+- Python 3.8+
+- ~2GB disk space (for tools)
+- Sudo access (for tool installation)
+
+### Setup
+
+```bash
+cd /app/backend
+bash cli_run.sh
+```
+
+This will:
+1. Create Python virtual environment
+2. Install dependencies (rich, httpx, python-dotenv)
+3. Generate `.env` template
+4. Optionally launch Axiom
+
+### Configuration
+
+Edit `/app/backend/.env`:
+
+**Option 1: Emergent Universal LLM (Free)**
+```bash
+EMERGENT_LLM_KEY=your_key_here
+# Get key at: https://emergentintegrations.com
+```
+
+**Option 2: OpenAI or Compatible**
+```bash
+CUSTOM_LLM_BASE_URL=https://api.openai.com/v1
+CUSTOM_LLM_API_KEY=sk-...
+CUSTOM_LLM_MODEL=gpt-4
+```
+
+### Launch
+
+```bash
+python3 /app/backend/axiom_cli.py
+```
+
+---
+
+## Examples
+
+### Example 1: Reconnaissance
+
+```
+> /chat Perform recon on example.com
+
+Axiom: I'll start with DNS enumeration...
+[Auto-exec] nmap -F example.com
+
+Axiom: Found open ports. Let me check services...
+[Auto-exec] whatweb http://example.com
+
+Axiom: Running Apache. Let me search for directories...
+[Auto-exec] gobuster dir -u http://example.com -w /opt/SecLists/Discovery/Web-Content/common.txt
+
+Axiom: Found /admin. Appears vulnerable to SQLi. Attempting exploitation...
+```
+
+### Example 2: Manual Command
+
+```
+> /exec sqlmap -u "http://target.com/page.php?id=1" --batch --dbs
+
+[Output...]
+Database: information_schema
+Database: mysql
+Database: webapp_db
+```
+
+### Example 3: Workflow
+
+```
+> /chat Check for Shellshock vulnerability on target.com
+
+Axiom: Testing for Shellshock...
+[Auto-exec] curl -H "User-Agent: () { :; }; echo vulnerable" http://target.com
+
+Axiom: Vulnerable! Let me test command injection...
+```
+
+---
+
+## Architecture
+
+### Directory Structure
+
+```
+/app/
+├── backend/                    # CLI application
+│   ├── axiom_cli.py           # Main CLI app
+│   ├── axiom_exec.py          # Code executor
+│   ├── axiom_chat.py          # AI integration
+│   ├── axiom_tools.py         # Tool management
+│   ├── cli_run.sh             # Setup script
+│   ├── install_tools.sh       # Tool installer
+│   ├── requirements_cli.txt   # Python packages
+│   ├── server.py              # FastAPI (reference)
+│   └── .env                   # Configuration
+│
+├── docs/                       # Documentation
+│   ├── QUICK_START.md         # 5-minute setup
+│   ├── CLI_README.md          # Full reference
+│   └── CONVERSION_SUMMARY.md  # Technical details
+│
+├── runtime_workspace/         # Execution space
+│   └── run-*/                 # Per-execution dirs
+│
+├── memory/                    # Project documentation
+├── README.md                  # This file
+└── LICENSE
+```
+
+### Execution Flow
+
+```
+User Input
+    ↓
+CLI Parser
+    ↓
+    ├─ /chat → AI → Extract Code → Execute → Feed Back
+    ├─ /exec → Direct Execution
+    └─ /tools, /help, etc. → Display Info
+```
+
+---
+
+## Documentation
+
+- **[Quick Start](docs/QUICK_START.md)** — 5-minute setup guide
+- **[CLI Reference](docs/CLI_README.md)** — Full command reference and examples  
+- **[Technical Details](docs/CONVERSION_SUMMARY.md)** — Architecture and changes
+
+---
+
+## Security
+
+⚠️ **Important**:
+
+- Only test systems you own or have written authorization to penetrate test
+- Penetration testing without permission is **illegal**
+- Keep `.env` private (never commit to git)
+- Tool output may contain sensitive data
+- Run with appropriate privileges for your tools
+
+```bash
+# Most tools work without sudo, but nmap/masscan may need it
+sudo python3 axiom_cli.py
+```
+
+---
+
+## Key Differences from Web App
+
+| Aspect | Web App | CLI |
+|--------|---------|-----|
+| Interface | React Native web | Terminal (rich) |
+| Backend | Separate FastAPI server | Integrated |
+| Execution | HTTP API | Direct async |
+| Auth | Browser login | None (local) |
+| Startup | Server + browser | Single command |
+| Performance | Network overhead | Instant |
+
+---
+
+## Troubleshooting
+
+### "No LLM configured"
+Check `.env` has `EMERGENT_LLM_KEY=...` or custom OpenAI settings.
+
+### Tools not installing
+```bash
+bash /app/backend/install_tools.sh
+```
+
+### Permission denied
+```bash
+sudo python3 /app/backend/axiom_cli.py
+```
+
+### "command not found"
+Wait for background tool installation, or install manually:
+```bash
+sudo apt-get install -y nmap sqlmap nikto whatweb gobuster hydra john hashcat
+```
+
+---
+
+## Performance
+
+- **Startup**: 2-3 seconds
+- **First run**: 5+ minutes (tool installation)
+- **Chat response**: 5-30 seconds (provider dependent)
+- **Code execution**: Instant to 120s (timeout)
+
+---
+
+## File Structure
+
+```
+backend/
+├── axiom_cli.py              ← Main terminal app (450 lines)
+├── axiom_exec.py             ← Execution engine (200 lines)
+├── axiom_chat.py             ← AI integration (180 lines)
+├── axiom_tools.py            ← Tool management (200 lines)
+├── cli_run.sh                ← Setup script (executable)
+├── install_tools.sh          ← Tool installer
+├── requirements_cli.txt      ← Python packages
+├── server.py                 ← FastAPI reference (optional)
+├── .env                      ← Configuration
+└── venv/                     ← Virtual environment
+```
+
+---
+
+## License
   is used by chat, terminal and agents, so a green selftest = all three work.
 
 ---
