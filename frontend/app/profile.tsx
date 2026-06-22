@@ -33,7 +33,6 @@ interface UserPrefs {
   clearHistoryOnLogout: boolean;
   terminalFontSize: number;
   maxSessions: number;
-  defaultModel: string;
   showStealthMeter: boolean;
   showTTPTracker: boolean;
   compactMode: boolean;
@@ -51,7 +50,6 @@ const DEFAULT_PREFS: UserPrefs = {
   clearHistoryOnLogout: false,
   terminalFontSize: 12,
   maxSessions: 50,
-  defaultModel: 'google/gemini-3-flash-preview',
   showStealthMeter: true,
   showTTPTracker: true,
   compactMode: false,
@@ -207,7 +205,6 @@ export default function ProfileScreen() {
         AsyncStorage.removeItem('axiom_attack_storage'),
         AsyncStorage.removeItem('axiom_exec_log'),
         AsyncStorage.removeItem('axiom_system_prompt'),
-        AsyncStorage.removeItem('axiom_model'),
         AsyncStorage.removeItem(PREFS_KEY),
       ]);
       setPrefs(DEFAULT_PREFS);

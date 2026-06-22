@@ -23,7 +23,7 @@ import { StealthMeter } from '@/components/chat/StealthMeter';
 import { TTPTracker } from '@/components/chat/TTPTracker';
 import { Colors, Typography, Spacing, Radius } from '@/constants/theme';
 import { Message, ChatSession } from '@/services/aiService';
-import { getCustomAIProvider, setCustomAIProvider, CustomAIProvider } from '@/services/selfUpdateService';
+// AI provider selection removed from chat UI
 
 export default function ChatScreen() {
   const {
@@ -53,33 +53,7 @@ export default function ChatScreen() {
   const [showHistory, setShowHistory] = useState(false);
   const [showTTP, setShowTTP] = useState(false);
 
-  // ── Chat-tab AI selector: pick between Emergent default and the saved Custom provider ──
-  const [customProvider, setCustomProvider] = React.useState<CustomAIProvider | null>(null);
-  const [aiPickerOpen, setAiPickerOpen] = useState(false);
-  React.useEffect(() => {
-    getCustomAIProvider().then(setCustomProvider);
-  }, []);
-  // Re-read whenever picker closes so changes from Config tab are reflected
-  React.useEffect(() => {
-    if (!aiPickerOpen) getCustomAIProvider().then(setCustomProvider);
-  }, [aiPickerOpen]);
-
-  const setCustomEnabled = React.useCallback(async (enabled: boolean) => {
-    if (!customProvider) return;
-    if (enabled && (!customProvider.baseUrl || !customProvider.apiKey)) {
-      // Custom not configured — bounce to Config tab
-      router.push('/config');
-      return;
-    }
-    const updated = { ...customProvider, enabled };
-    setCustomProvider(updated);
-    await setCustomAIProvider(updated);
-  }, [customProvider, router]);
-
-  const activeAiLabel = customProvider?.enabled && customProvider.baseUrl && customProvider.apiKey
-    ? (customProvider.model || customProvider.label || 'Custom')
-    : 'Emergent · Claude';
-  const activeAiColor = customProvider?.enabled ? '#ff8800' : '#00d4ff';
+  // AI provider selection removed from chat UI
 
   const handleSend = useCallback(() => {
     if (inputText.trim()) {
@@ -138,33 +112,7 @@ export default function ChatScreen() {
           </View>
         </View>
         <View style={styles.headerActions}>
-          {/* AI selector chip — pick between Emergent default and saved Custom provider */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.autoExecBtn,
-              {
-                borderColor: activeAiColor + '66',
-                backgroundColor: activeAiColor + '14',
-              },
-              pressed && { opacity: 0.6 },
-            ]}
-            onPress={() => setAiPickerOpen(true)}
-            hitSlop={6}
-            testID="ai-selector-chip"
-          >
-            <MaterialIcons
-              name={customProvider?.enabled ? 'memory' : 'auto-awesome'}
-              size={14}
-              color={activeAiColor}
-            />
-            <Text
-              style={[styles.autoExecText, { color: activeAiColor, maxWidth: 110 }]}
-              numberOfLines={1}
-            >
-              {activeAiLabel}
-            </Text>
-            <MaterialIcons name="expand-more" size={12} color={activeAiColor} />
-          </Pressable>
+          {/* AI selector removed */}
           {/* AUTO-EXEC toggle: when ON, AI's code blocks run in the container shell and results feed back */}
           <Pressable
             style={({ pressed }) => [
@@ -386,155 +334,7 @@ export default function ChatScreen() {
         </View>
       </Modal>
 
-      {/* ── AI provider picker ─────────────────────────────────────────── */}
-      <Modal
-        visible={aiPickerOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAiPickerOpen(false)}
-      >
-        <Pressable
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}
-          onPress={() => setAiPickerOpen(false)}
-        >
-          <Pressable
-            onPress={(e) => e.stopPropagation?.()}
-            style={{
-              backgroundColor: Colors.surfaceElevated,
-              borderTopWidth: 1,
-              borderTopColor: Colors.surfaceBorder,
-              paddingHorizontal: Spacing.lg,
-              paddingTop: Spacing.lg,
-              paddingBottom: Math.max(insets.bottom, Spacing.lg),
-              gap: Spacing.md,
-              borderTopLeftRadius: Radius.xl,
-              borderTopRightRadius: Radius.xl,
-            }}
-          >
-            <View style={{ alignItems: 'center', marginBottom: Spacing.xs }}>
-              <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.surfaceBorder }} />
-            </View>
-            <Text
-              style={{
-                color: Colors.textMuted, fontSize: Typography.xs,
-                fontWeight: Typography.bold, letterSpacing: 1.5,
-                marginBottom: Spacing.xs,
-              }}
-            >
-              CHOOSE AI ENGINE FOR CHAT
-            </Text>
-
-            {/* Emergent default option */}
-            <Pressable
-              testID="ai-option-emergent"
-              onPress={() => { setCustomEnabled(false); setAiPickerOpen(false); }}
-              style={({ pressed }) => [{
-                flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-                padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1,
-                borderColor: !customProvider?.enabled ? '#00d4ff88' : Colors.surfaceBorder,
-                backgroundColor: !customProvider?.enabled ? '#00d4ff14' : Colors.surface,
-                opacity: pressed ? 0.7 : 1,
-              }]}
-            >
-              <MaterialIcons
-                name="auto-awesome"
-                size={20}
-                color={!customProvider?.enabled ? '#00d4ff' : Colors.textMuted}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: Colors.textPrimary, fontSize: Typography.base, fontWeight: Typography.bold, letterSpacing: 0.5 }}>
-                  Emergent · Claude Sonnet 4.5
-                </Text>
-                <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>
-                  Default OnSpace/Emergent universal key
-                </Text>
-              </View>
-              {!customProvider?.enabled && (
-                <MaterialIcons name="check-circle" size={20} color="#00d4ff" />
-              )}
-            </Pressable>
-
-            {/* Custom provider option */}
-            {customProvider?.saved && customProvider.baseUrl && customProvider.apiKey ? (
-              <Pressable
-                testID="ai-option-custom"
-                onPress={() => { setCustomEnabled(true); setAiPickerOpen(false); }}
-                style={({ pressed }) => [{
-                  flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-                  padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1,
-                  borderColor: customProvider?.enabled ? '#ff880088' : Colors.surfaceBorder,
-                  backgroundColor: customProvider?.enabled ? '#ff880014' : Colors.surface,
-                  opacity: pressed ? 0.7 : 1,
-                }]}
-              >
-                <MaterialIcons
-                  name="memory"
-                  size={20}
-                  color={customProvider?.enabled ? '#ff8800' : Colors.textMuted}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: Colors.textPrimary, fontSize: Typography.base, fontWeight: Typography.bold, letterSpacing: 0.5 }}>
-                    {customProvider.label || 'Custom Provider'}
-                  </Text>
-                  <Text
-                    style={{
-                      color: Colors.textMuted, fontSize: 11, marginTop: 2,
-                      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-                    }}
-                    numberOfLines={1}
-                  >
-                    {(customProvider.model || 'no model') + ' · ' + customProvider.baseUrl.replace(/^https?:\/\//, '')}
-                  </Text>
-                </View>
-                {customProvider?.enabled && (
-                  <MaterialIcons name="check-circle" size={20} color="#ff8800" />
-                )}
-              </Pressable>
-            ) : (
-              <Pressable
-                testID="ai-option-configure"
-                onPress={() => { setAiPickerOpen(false); router.push('/config'); }}
-                style={({ pressed }) => [{
-                  flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-                  padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1,
-                  borderColor: Colors.surfaceBorder, backgroundColor: Colors.surface,
-                  borderStyle: 'dashed',
-                  opacity: pressed ? 0.7 : 1,
-                }]}
-              >
-                <MaterialIcons name="add-circle-outline" size={20} color={Colors.textMuted} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: Colors.textPrimary, fontSize: Typography.base, fontWeight: Typography.bold, letterSpacing: 0.5 }}>
-                    Configure Custom AI
-                  </Text>
-                  <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>
-                    Add your own OpenAI-compatible endpoint
-                  </Text>
-                </View>
-                <MaterialIcons name="chevron-right" size={20} color={Colors.textMuted} />
-              </Pressable>
-            )}
-
-            {/* Manage button (always present once saved) */}
-            {customProvider?.saved && (
-              <Pressable
-                onPress={() => { setAiPickerOpen(false); router.push('/config'); }}
-                style={({ pressed }) => [{
-                  alignSelf: 'center',
-                  flexDirection: 'row', alignItems: 'center', gap: 4,
-                  paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md,
-                  opacity: pressed ? 0.6 : 1,
-                }]}
-              >
-                <MaterialIcons name="settings" size={13} color={Colors.textMuted} />
-                <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: Typography.bold, letterSpacing: 1 }}>
-                  MANAGE CUSTOM PROVIDER
-                </Text>
-              </Pressable>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {/* AI provider picker removed */}
     </SafeAreaView>
   );
 }
